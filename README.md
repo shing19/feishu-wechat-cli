@@ -95,6 +95,4 @@ feishu-wechat publish -f ./article.md
 
 ## 注意事项
 
-- `.env` 已被 git ignore，不会进公开仓库
-- `.env.example` 可以安全提交
 - 当前自动封面依赖外部生图服务，可能遇到 429；建议后续补重试和降级策略
