@@ -34,9 +34,11 @@ pnpm build
 ```bash
 npm install -g @larksuite/cli
 lark-cli --help
+lark-cli config init --new
 ```
 
 如果 `lark-cli --help` 能正常输出，说明依赖已安装完成。
+安装完成后，还需要执行 `lark-cli config init --new` 绑定你的飞书账号或应用配置，否则 CLI 无法抓取文档和下载图片。
 
 ## 环境变量
 
