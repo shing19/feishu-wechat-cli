@@ -43,8 +43,8 @@ cp .env.example .env
 最少需要配置：
 
 ```env
-WECHAT_APPID=your_wechat_appid
-WECHAT_APPSECRET=your_wechat_appsecret
+WECHAT_APP_ID=your_wechat_appid
+WECHAT_APP_SECRET=your_wechat_appsecret
 ```
 
 如果你要用自动封面：
@@ -89,8 +89,8 @@ node ./dist/cli.js publish -f ./article.md
 
 微信配置只保留一套命名：
 
-- `WECHAT_APPID`
-- `WECHAT_APPSECRET`
+- `WECHAT_APP_ID`
+- `WECHAT_APP_SECRET`
 
 飞书抓取与图片下载默认内建使用 `lark-cli`，不做额外 provider 配置。
 封面生成也内建在本仓库 `scripts/generate-cover.py` 中，只通过环境变量提供模型访问配置：
