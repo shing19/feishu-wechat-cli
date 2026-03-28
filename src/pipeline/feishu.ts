@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { normalizeFeishuMarkdown, replaceFeishuImageTokens } from "./semantic.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -45,7 +46,7 @@ async function runJsonCommand(command: string, args: string[], cwd?: string) {
 }
 
 async function downloadFeishuMediaTokens(markdown: string, docToken: string) {
-  const tokenMatches = [...markdown.matchAll(/<image\s+token="([^"]+)"[^>]*\/>/g)];
+  const tokenMatches = [...markdown.matchAll(/<feishu-image\s+token="([^"]+)"[^>]*\/>/g)];
   const uniqueTokens = [...new Set(tokenMatches.map((match) => match[1]).filter(Boolean))];
 
   if (uniqueTokens.length === 0) {
@@ -80,11 +81,7 @@ async function downloadFeishuMediaTokens(markdown: string, docToken: string) {
     assetPaths.push(absoluteSavedPath);
   }
 
-  const replacedMarkdown = markdown.replace(/<image\s+token="([^"]+)"[^>]*\/>/g, (_match, token: string) => {
-    const localPath = mapping.get(token);
-    if (!localPath) return "";
-    return `![](${localPath})`;
-  });
+  const replacedMarkdown = replaceFeishuImageTokens(markdown, mapping);
 
   return { markdown: replacedMarkdown, assetDir, assetPaths };
 }
@@ -106,11 +103,13 @@ export async function fetchFeishuDocument(input: string): Promise<FeishuFetchRes
   for (const candidate of candidates) {
     try {
       const parsed = await runJsonCommand(candidate.command, candidate.args);
-      const markdown = parsed.markdown ?? parsed.content ?? parsed.data?.markdown ?? parsed.data?.content;
+      const rawMarkdown = parsed.markdown ?? parsed.content ?? parsed.data?.markdown ?? parsed.data?.content;
       const title = parsed.title ?? parsed.data?.title;
-      if (!markdown || typeof markdown !== "string") {
+      if (!rawMarkdown || typeof rawMarkdown !== "string") {
         throw new Error("命令执行成功，但未返回 markdown/content 字段。");
       }
+
+      const markdown = normalizeFeishuMarkdown(rawMarkdown);
 
       if (candidate.kind === "primary") {
         const downloaded = await downloadFeishuMediaTokens(markdown, docToken);

@@ -45,7 +45,22 @@ describe("CLI Argument Parsing", () => {
     });
     vi.mocked(wrapper.renderAndPublish).mockResolvedValue("mock-media-id");
     vi.mocked(wrapper.renderAndPublishToServer).mockResolvedValue("mock-media-id");
-    vi.mocked(pipeline.fetchFeishuDocument).mockResolvedValue({ markdown: "# Feishu", title: "Feishu Title", assetDir: "/tmp/feishu-assets/doc" });
+    vi.mocked(pipeline.fetchFeishuDocument).mockResolvedValue({
+      markdown: [
+        "# Feishu",
+        "",
+        "<section class=\"feishu-callout feishu-callout-tip\" data-callout=\"tip\">",
+        "提示内容",
+        "</section>",
+        "",
+        "<figure class=\"feishu-figure\">",
+        "<img src=\"./image-001.png\" alt=\"图注说明\" />",
+        "<figcaption>图注说明</figcaption>",
+        "</figure>",
+      ].join("\n"),
+      title: "Feishu Title",
+      assetDir: "/tmp/feishu-assets/doc",
+    });
     program = createProgram("1.0.0");
     program.exitOverride();
   });
@@ -125,6 +140,8 @@ describe("CLI Argument Parsing", () => {
     expect(article).toContain('cover: "./cover.jpg"');
     expect(article).toContain('author: "shing"');
     expect(article).toContain("# Feishu");
+    expect(article).toContain('class="feishu-callout feishu-callout-tip"');
+    expect(article).toContain("<figcaption>图注说明</figcaption>");
   });
 
   it("should auto generate cover for feishu content", async () => {

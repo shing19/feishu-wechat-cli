@@ -99,4 +99,27 @@ describe("prepareRenderContext", () => {
 
     expect(gzhContent.content).toContain("<span>Content</span></h1>");
   });
+
+  it("should preserve callout and figure semantics in rendered html", async () => {
+    const input = [
+      '# Title',
+      '',
+      '<section class="feishu-callout feishu-callout-tip" data-callout="tip">',
+      '提示内容',
+      '</section>',
+      '',
+      '<figure class="feishu-figure">',
+      '<img src="./image-001.png" alt="图注说明" />',
+      '<figcaption>图注说明</figcaption>',
+      '</figure>',
+    ].join('\n');
+
+    const { gzhContent } = await prepareRenderContext(input, defaultOptions as any, async (value) => ({
+      content: value ?? "",
+      absoluteDirPath: undefined,
+    }));
+
+    expect(gzhContent.content).toContain('feishu-callout');
+    expect(gzhContent.content).toContain('<figcaption>图注说明</figcaption>');
+  });
 });
