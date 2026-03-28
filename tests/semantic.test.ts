@@ -22,6 +22,14 @@ describe("normalizeFeishuMarkdown", () => {
     const result = normalizeFeishuMarkdown(source);
     expect(result).toContain('<feishu-image token="img123" caption="示意图说明" />');
   });
+
+  it("converts feishu callout tags into standard html sections", () => {
+    const source = '<callout emoji="lobster" background-color="#eee" border-color="#ccc">\n- 第一条\n- 第二条\n</callout>';
+    const result = normalizeFeishuMarkdown(source);
+    expect(result).toContain('class="feishu-callout"');
+    expect(result).toContain('🦞');
+    expect(result).toContain('• 第一条');
+  });
 });
 
 describe("replaceFeishuImageTokens", () => {
@@ -31,9 +39,10 @@ describe("replaceFeishuImageTokens", () => {
       new Map([["img123", "./image-001.png"]]),
     );
 
-    expect(result).toContain('<figure class="feishu-figure">');
+    expect(result).toContain('class="feishu-figure"');
     expect(result).toContain('<img src="./image-001.png" alt="图1：系统结构" />');
-    expect(result).toContain("<figcaption>图1：系统结构</figcaption>");
+    expect(result).toContain('class="feishu-caption"');
+    expect(result).toContain("图1：系统结构");
   });
 
   it("falls back to markdown image when caption is absent", () => {

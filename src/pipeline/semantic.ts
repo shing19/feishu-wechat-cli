@@ -1,4 +1,5 @@
 const INLINE_IMAGE_RE = /<image\s+token="([^"]+)"([^>]*)\/>/g;
+const CALLOUT_TAG_RE = /<callout([^>]*)>([\s\S]*?)<\/callout>/gi;
 const CALLOUT_HEADER_RE = /^\[(TIP|INFO|NOTE|WARNING|WARN|CAUTION|SUCCESS|ERROR)\]\s*(.*)$/i;
 
 function escapeHtml(value: string): string {
@@ -8,6 +9,11 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function extractAttr(attrs: string, name: string): string | undefined {
+  const match = attrs.match(new RegExp(`${name}="([^"]+)"`, "i"));
+  return match?.[1]?.trim() || undefined;
 }
 
 function extractImageCaption(attrs: string): string | undefined {
@@ -24,6 +30,36 @@ function extractImageCaption(attrs: string): string | undefined {
   }
 
   return undefined;
+}
+
+function resolveFeishuEmoji(value: string | undefined): string {
+  if (!value) return "💡";
+  const table: Record<string, string> = {
+    lobster: "🦞",
+    bulb: "💡",
+    warning: "⚠️",
+    info: "ℹ️",
+    tip: "💡",
+    fire: "🔥",
+    star: "⭐",
+    check: "✅",
+  };
+  return table[value.toLowerCase()] || value;
+}
+
+function normalizeCalloutTags(markdown: string): string {
+  return markdown.replace(CALLOUT_TAG_RE, (_match, attrs: string, inner: string) => {
+    const emoji = resolveFeishuEmoji(extractAttr(attrs, "emoji"));
+    const background = extractAttr(attrs, "background-color") || "#f6f7fb";
+    const border = extractAttr(attrs, "border-color") || "#d6d9e0";
+    const content = inner.trim().replace(/^[-*]\s+/gm, "• ");
+    return [
+      `<section class="feishu-callout" data-callout="true" style="margin: 1.2em 0; padding: 12px 14px; border-radius: 12px; background: ${background}; border: 1px solid ${border};">`,
+      `<p style="margin: 0 0 8px 0;"><strong>${emoji} 提示</strong></p>`,
+      `<div>${content}</div>`,
+      `</section>`,
+    ].join("\n");
+  });
 }
 
 function normalizeImageLine(line: string): string {
@@ -81,7 +117,8 @@ function normalizeCalloutBlock(lines: string[], startIndex: number): { block?: s
 }
 
 export function normalizeFeishuMarkdown(markdown: string): string {
-  const imageNormalized = markdown.replace(INLINE_IMAGE_RE, (_match, token: string, attrs: string) => {
+  const calloutNormalized = normalizeCalloutTags(markdown);
+  const imageNormalized = calloutNormalized.replace(INLINE_IMAGE_RE, (_match, token: string, attrs: string) => {
     const caption = extractImageCaption(attrs);
     const safeCaption = caption ? ` caption="${escapeHtml(caption)}"` : "";
     return `<feishu-image token="${token}"${safeCaption} />`;
@@ -116,7 +153,12 @@ export function replaceFeishuImageTokens(markdown: string, tokenToLocalPath: Map
     if (!localPath) return "";
     const caption = extractImageCaption(attrs);
     if (caption) {
-      return `<figure class="feishu-figure">\n<img src="${localPath}" alt="${escapeHtml(caption)}" />\n<figcaption>${caption}</figcaption>\n</figure>`;
+      return [
+        `<section class="feishu-figure" style="margin: 1.25em 0; text-align: center;">`,
+        `<img src="${localPath}" alt="${escapeHtml(caption)}" />`,
+        `<p class="feishu-caption" style="margin-top: 8px; color: #888; font-size: 14px; text-align: center;">${caption}</p>`,
+        `</section>`,
+      ].join("\n");
     }
     return `![](${localPath})`;
   });

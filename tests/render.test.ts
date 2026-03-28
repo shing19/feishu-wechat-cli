@@ -108,10 +108,10 @@ describe("prepareRenderContext", () => {
       '提示内容',
       '</section>',
       '',
-      '<figure class="feishu-figure">',
+      '<section class="feishu-figure">',
       '<img src="./image-001.png" alt="图注说明" />',
-      '<figcaption>图注说明</figcaption>',
-      '</figure>',
+      '<p class="feishu-caption">图注说明</p>',
+      '</section>',
     ].join('\n');
 
     const { gzhContent } = await prepareRenderContext(input, defaultOptions as any, async (value) => ({
@@ -120,6 +120,7 @@ describe("prepareRenderContext", () => {
     }));
 
     expect(gzhContent.content).toContain('feishu-callout');
-    expect(gzhContent.content).toContain('<figcaption>图注说明</figcaption>');
+    expect(gzhContent.content).toContain('feishu-caption');
+    expect(gzhContent.content).toContain('图注说明');
   });
 });

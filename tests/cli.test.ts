@@ -53,10 +53,10 @@ describe("CLI Argument Parsing", () => {
         "提示内容",
         "</section>",
         "",
-        "<figure class=\"feishu-figure\">",
+        "<section class=\"feishu-figure\">",
         "<img src=\"./image-001.png\" alt=\"图注说明\" />",
-        "<figcaption>图注说明</figcaption>",
-        "</figure>",
+        "<p class=\"feishu-caption\">图注说明</p>",
+        "</section>",
       ].join("\n"),
       title: "Feishu Title",
       assetDir: "/tmp/feishu-assets/doc",
@@ -141,7 +141,8 @@ describe("CLI Argument Parsing", () => {
     expect(article).toContain('author: "shing"');
     expect(article).toContain("# Feishu");
     expect(article).toContain('class="feishu-callout feishu-callout-tip"');
-    expect(article).toContain("<figcaption>图注说明</figcaption>");
+    expect(article).toContain('class="feishu-caption"');
+    expect(article).toContain("图注说明");
   });
 
   it("should auto generate cover for feishu content", async () => {
