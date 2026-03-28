@@ -1,5 +1,5 @@
 {
-  "name": "feishu-wechat-cli",
+  "name": "@shing19/feishu-wechat-cli",
   "version": "0.1.0",
   "description": "CLI for publishing Feishu docs to WeChat Official Account drafts",
   "author": "shing",
@@ -27,6 +27,9 @@
     "scripts/generate-cover.py"
   ],
   "homepage": "https://github.com/shing19/feishu-wechat-cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/shing19/feishu-wechat-cli.git"

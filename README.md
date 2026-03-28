@@ -1,6 +1,12 @@
-# feishu-wechat-cli
+# @shing19/feishu-wechat-cli
 
 把飞书文档一键发布到微信公众号草稿箱的 CLI。
+
+安装：
+
+```bash
+npm install -g @shing19/feishu-wechat-cli
+```
 
 支持：
 - 从飞书 `wiki/docx` 抓取 Markdown
