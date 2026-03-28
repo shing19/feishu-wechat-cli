@@ -86,7 +86,7 @@ export async function serveCommand(options: ServeOptions) {
 
     // 健康检查
     app.get("/health", (_req: Request, res: Response) => {
-        res.json({ status: "ok", service: "wenyan-cli", version: options.version || "unknown" });
+        res.json({ status: "ok", service: "feishu-wechat-cli", version: options.version || "unknown" });
     });
 
     // 鉴权探针
@@ -179,7 +179,7 @@ export async function serveCommand(options: ServeOptions) {
 
     return new Promise<void>((resolve, reject) => {
         const server = app.listen(port, () => {
-            console.log(`文颜 Server 已启动，监听端口 ${port}`);
+            console.log(`feishu-wechat server 已启动，监听端口 ${port}`);
             console.log(`健康检查：http://localhost:${port}/health`);
             console.log(`鉴权探针：http://localhost:${port}/verify`);
             console.log(`发布接口：POST http://localhost:${port}/publish`);

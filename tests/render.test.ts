@@ -1,96 +1,102 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { prepareRenderContext } from "../src/commands/render";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
-
-// 1. Mock 外部模块
-vi.mock("node:fs/promises");
+import { prepareRenderContext } from "@wenyan-md/core/wrapper";
 
 describe("prepareRenderContext", () => {
-    // 默认配置，防止 "theme undefined" 错误
-    const defaultOptions = {
-        theme: "default",
-        highlight: "solarized-light",
-        macStyle: true,
-        footnote: true,
-    };
+  const defaultOptions = {
+    theme: "default",
+    highlight: "solarized-light",
+    macStyle: true,
+    footnote: true,
+  };
 
-    beforeEach(() => {
-        vi.clearAllMocks();
-        // 拦截 console 和 process.exit
-        vi.spyOn(console, "log").mockImplementation(() => {});
-        vi.spyOn(console, "error").mockImplementation(() => {});
-        vi.spyOn(process, "exit").mockImplementation((code) => {
-            throw new Error(`Process exit with code ${code}`);
-        });
+  beforeEach(() => {
+    process.env.WECHAT_APP_ID = "test-app-id";
+    process.env.WECHAT_APP_SECRET = "test-app-secret";
+  });
+
+  afterEach(async () => {
+    delete process.env.WECHAT_APP_ID;
+    delete process.env.WECHAT_APP_SECRET;
+    try {
+      await fs.unlink(path.resolve(process.cwd(), "my-theme.css"));
+    } catch {}
+  });
+
+  it("should render content from direct string argument", async () => {
+    const input = "# Hello";
+
+    const { gzhContent } = await prepareRenderContext(input, defaultOptions as any, async (value) => ({
+      content: value ?? "",
+      absoluteDirPath: undefined,
+    }));
+
+    expect(gzhContent.content).toContain("<span>Hello</span></h1>");
+  });
+
+  it("should render content from stdin when input arg is missing", async () => {
+    const originalIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false;
+
+    setTimeout(() => {
+      process.stdin.emit("data", "# From Stdin");
+      process.stdin.emit("end");
+    }, 50);
+
+    const { gzhContent } = await prepareRenderContext(undefined, defaultOptions as any, async () => {
+      const content = await new Promise<string>((resolve) => {
+        let data = "";
+        process.stdin.setEncoding("utf8");
+        process.stdin.on("data", (chunk) => (data += chunk));
+        process.stdin.on("end", () => resolve(data));
+      });
+      return { content, absoluteDirPath: undefined };
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
+    expect(gzhContent.content).toContain("<span>From Stdin</span></h1>");
+    process.stdin.isTTY = originalIsTTY;
+  });
 
-    it("should render content from direct string argument", async () => {
-        const input = "# Hello";
+  it("should render content from file when input arg and stdin are missing", async () => {
+    const originalIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = true;
 
-        const { gzhContent } = await prepareRenderContext(input, defaultOptions as any);
+    const filePath = path.resolve(process.cwd(), "test.md");
+    await fs.writeFile(filePath, "# From File", "utf-8");
 
-        expect(gzhContent.content).toContain("<span>Hello</span></h1>");
-    });
+    const { gzhContent } = await prepareRenderContext(undefined, { ...defaultOptions, file: "test.md" } as any, async (_input, file) => ({
+      content: await fs.readFile(path.resolve(process.cwd(), file!), "utf-8"),
+      absoluteDirPath: path.dirname(path.resolve(process.cwd(), file!)),
+    }));
 
-    it("should render content from stdin when input arg is missing", async () => {
-        const originalIsTTY = process.stdin.isTTY;
-        process.stdin.isTTY = false;
+    expect(gzhContent.content).toContain("<span>From File</span></h1>");
 
-        setTimeout(() => {
-            process.stdin.emit("data", "# From Stdin");
-            process.stdin.emit("end");
-        }, 50);
+    await fs.unlink(filePath);
+    process.stdin.isTTY = originalIsTTY;
+  });
 
-        const { gzhContent } = await prepareRenderContext(undefined, defaultOptions as any);
+  it("should throw error when no input source is provided", async () => {
+    await expect(
+      prepareRenderContext(undefined, defaultOptions as any, async () => {
+        throw new Error("missing input-content (no argument, no stdin, and no file).");
+      }),
+    ).rejects.toThrow(/missing input-content/);
+  });
 
-        expect(gzhContent.content).toContain("<span>From Stdin</span></h1>");
-        process.stdin.isTTY = originalIsTTY;
-    });
+  it("should load custom theme css if option provided", async () => {
+    const input = "# Content";
+    const cssPath = path.resolve(process.cwd(), "my-theme.css");
+    await fs.writeFile(cssPath, ".test { color: red; }", "utf-8");
 
-    it("should render content from file when input arg and stdin are missing", async () => {
-        const originalIsTTY = process.stdin.isTTY;
-        process.stdin.isTTY = true;
+    const { gzhContent } = await prepareRenderContext(input, {
+      ...defaultOptions,
+      customTheme: "my-theme.css",
+    } as any, async (value) => ({
+      content: value ?? "",
+      absoluteDirPath: undefined,
+    }));
 
-        const fileContent = "# From File";
-        vi.mocked(fs.readFile).mockResolvedValue(fileContent);
-
-        const { gzhContent } = await prepareRenderContext(undefined, { ...defaultOptions, file: "test.md" } as any);
-
-        expect(fs.readFile).toHaveBeenCalledWith(path.resolve(process.cwd(), "test.md"), "utf-8");
-        expect(gzhContent.content).toContain("<span>From File</span></h1>");
-
-        process.stdin.isTTY = originalIsTTY;
-    });
-
-    it("should throw error (which leads to exit) when no input source is provided", async () => {
-        const originalIsTTY = process.stdin.isTTY;
-        process.stdin.isTTY = true;
-
-        // prepareRenderContext 内部使用的是 throw Error，这里需要匹配实际抛出的错误信息
-        await expect(prepareRenderContext(undefined, defaultOptions as any)).rejects.toThrow(/missing input-content/);
-
-        process.stdin.isTTY = originalIsTTY;
-    });
-
-    it("should load custom theme css if option provided", async () => {
-        const input = "# Content";
-        const cssContent = ".test { color: red; }";
-
-        vi.mocked(fs.readFile).mockResolvedValue(cssContent);
-
-        // 验证返回的 gzhContent 包含了自定义样式
-        const { gzhContent } = await prepareRenderContext(input, {
-            ...defaultOptions,
-            customTheme: "my-theme.css",
-        });
-
-        expect(fs.readFile).toHaveBeenCalledWith(path.resolve(process.cwd(), "my-theme.css"), "utf-8");
-        // 假设 StyledContent 结构中 content 包含渲染后的 HTML，这里检查它是否处理了样式
-        expect(gzhContent.content).toContain("<span>Content</span></h1>");
-    });
+    expect(gzhContent.content).toContain("<span>Content</span></h1>");
+  });
 });

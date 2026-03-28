@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import fs from "node:fs";
+import path from "node:path";
 import pkg from "../package.json" with { type: "json" };
 import {
     addTheme,
@@ -13,13 +15,16 @@ import {
     ThemeOptions,
 } from "@wenyan-md/core/wrapper";
 import { getInputContent } from "./utils.js";
+import { fetchFeishuDocument, generateWechatCover, withFrontmatter } from "./pipeline/index.js";
+import { loadProjectEnv } from "./config.js";
 
 export function createProgram(version: string = pkg.version): Command {
+    loadProjectEnv();
     const program = new Command();
 
     program
-        .name("wenyan")
-        .description("A CLI for WenYan Markdown Render.")
+        .name("feishu-wechat")
+        .description("Publish Feishu docs and Markdown files to WeChat Official Account drafts.")
         .version(version, "-v, --version", "output the current version")
         .action(() => {
             program.outputHelp();
@@ -40,28 +45,73 @@ export function createProgram(version: string = pkg.version): Command {
 
     const pubCmd = program
         .command("publish")
-        .description("Render a markdown file to styled HTML and publish to wechat GZH");
+        .description("Publish a Markdown file or Feishu document to WeChat Official Account drafts");
 
     // 先添加公共选项，再追加 publish 专属选项
     addCommonOptions(pubCmd)
         .option("--server <url>", "Server URL to publish through (e.g. https://api.yourdomain.com)")
         .option("--api-key <apiKey>", "API key for the remote server")
-        .action(async (inputContent: string | undefined, options: ClientPublishOptions) => {
+        .option("--feishu <urlOrToken>", "Fetch markdown from Feishu/Lark wiki/docx before publishing")
+        .option("--article-title <title>", "Override article title when publishing Feishu content")
+        .option("--article-author <author>", "Set article author in frontmatter")
+        .option("--article-cover <pathOrUrl>", "Set or override article cover in frontmatter")
+        .option("--auto-cover", "Generate WeChat cover image automatically when cover is missing")
+        .option("--article-source-url <url>", "Override source_url in frontmatter")
+        .action(async (inputContent: string | undefined, options: ClientPublishOptions & {
+            feishu?: string;
+            articleTitle?: string;
+            articleAuthor?: string;
+            articleCover?: string;
+            autoCover?: boolean;
+            articleSourceUrl?: string;
+        }) => {
             await runCommandWrapper(async () => {
+                let finalInput = inputContent;
+
+                let finalOptions = options;
+
+                if (options.feishu) {
+                    const doc = await fetchFeishuDocument(options.feishu);
+                    let cover = options.articleCover;
+                    const title = options.articleTitle || doc.title || "未命名飞书文章";
+
+                    if (!cover && options.autoCover) {
+                        const generatedCover = await generateWechatCover({ title, assetDir: doc.assetDir });
+                        cover = doc.assetDir ? `./${generatedCover.split("/").pop()}` : generatedCover;
+                    }
+
+                    finalInput = withFrontmatter(doc.markdown, {
+                        title,
+                        cover,
+                        author: options.articleAuthor,
+                        source_url: options.articleSourceUrl || options.feishu,
+                    });
+
+                    if (doc.assetDir) {
+                        fs.mkdirSync(doc.assetDir, { recursive: true });
+                        const articlePath = path.join(doc.assetDir, "article.md");
+                        fs.writeFileSync(articlePath, finalInput, "utf-8");
+                        finalInput = undefined;
+                        finalOptions = { ...options, file: articlePath } as typeof options;
+                    } else {
+                        finalOptions = { ...options } as typeof options;
+                    }
+                }
+
                 // 如果传入了 --server，则走客户端（远程）模式
                 if (options.server) {
-                    options.clientVersion = version; // 将 CLI 版本传递给服务器，便于调试和兼容性处理
-                    const mediaId = await renderAndPublishToServer(inputContent, options, getInputContent);
+                    finalOptions.clientVersion = version; // 将 CLI 版本传递给服务器，便于调试和兼容性处理
+                    const mediaId = await renderAndPublishToServer(finalInput, finalOptions, getInputContent);
                     console.log(`发布成功，Media ID: ${mediaId}`);
                 } else {
                     // 走原有的本地直接发布模式
-                    const mediaId = await renderAndPublish(inputContent, options, getInputContent);
+                    const mediaId = await renderAndPublish(finalInput, finalOptions, getInputContent);
                     console.log(`发布成功，Media ID: ${mediaId}`);
                 }
             });
         });
 
-    const renderCmd = program.command("render").description("Render a markdown file to styled HTML");
+    const renderCmd = program.command("render").description("Render a Markdown file to styled HTML");
 
     addCommonOptions(renderCmd).action(async (inputContent: string | undefined, options: RenderOptions) => {
         await runCommandWrapper(async () => {

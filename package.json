@@ -1,46 +1,47 @@
 {
-  "name": "@wenyan-md/cli",
-  "version": "2.0.1",
-  "description": "A CLI tool for Wenyan markdown rendering & publishing",
-  "author": "Lei <caol64@gmail.com> (https://github.com/caol64)",
-  "license": "Apache-2.0",
+  "name": "feishu-wechat-cli",
+  "version": "0.1.0",
+  "description": "CLI for publishing Feishu docs to WeChat Official Account drafts",
+  "author": "shing",
+  "license": "MIT",
   "keywords": [
-    "公众号",
-    "markdown",
-    "文颜",
-    "wenyan",
+    "feishu",
+    "lark",
     "wechat",
+    "weixin",
+    "official-account",
     "publishing",
-    "renderer"
+    "markdown"
   ],
   "type": "module",
   "bin": {
-    "wenyan": "./dist/cli.js"
+    "feishu-wechat": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    ".env.example",
+    "scripts/generate-cover.py"
   ],
-  "homepage": "https://github.com/caol64/wenyan-cli#readme",
+  "homepage": "https://github.com/your-org/feishu-wechat-cli#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/caol64/wenyan-cli.git"
+    "url": "git+https://github.com/your-org/feishu-wechat-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/caol64/wenyan-cli/issues"
+    "url": "https://github.com/your-org/feishu-wechat-cli/issues"
   },
   "scripts": {
     "build": "tsc",
-    "upgrade:core": "pnpm update @wenyan-md/core",
-    "prepublishOnly": "pnpm upgrade:core && pnpm build",
-    "server": "pnpm build && pnpm dotenv -e .env.test -- node ./dist/cli.js serve",
-    "test:bin": "pnpm build && node ./dist/cli.js render -f tests/publish.md -c tests/manhua.css --no-mac-style",
+    "prepublishOnly": "pnpm build",
+    "server": "pnpm build && pnpm dotenv -e .env -- node ./dist/cli.js serve",
     "test:cli": "vitest run tests/cli.test.ts",
     "test:render": "vitest run tests/render.test.ts",
     "test:publish": "vitest run tests/publish.test.ts",
-    "test:realPublish": "pnpm build && pnpm dotenv -e .env.test -- node ./dist/cli.js publish -f tests/publish.md -c tests/manhua.css --no-mac-style",
-    "test:serverPublish": "pnpm build && node ./dist/cli.js publish -f tests/publish.md -c tests/manhua.css --no-mac-style --server http://localhost:3000"
+    "test": "vitest run"
   },
   "packageManager": "pnpm@10.7.1",
   "dependencies": {
