@@ -14,6 +14,23 @@ npm install -g @shing19/feishu-wechat-cli
 - 发布到微信公众号草稿箱
 - 可选自动生成封面图
 
+## 快速开始
+
+安装完成后，直接执行：
+
+```bash
+feishu-wechat publish \
+  --feishu "https://my.feishu.cn/wiki/xxxxxxxx"
+```
+
+如果你要连封面一起生成：
+
+```bash
+feishu-wechat publish \
+  --feishu "https://my.feishu.cn/wiki/xxxxxxxx" \
+  --auto-cover
+```
+
 ## 安装与配置
 
 ### 1. 安装飞书官方 CLI
@@ -105,3 +122,4 @@ feishu-wechat publish -f ./article.md
 - 自动封面使用：`IMAGE_API_KEY`、`IMAGE_BASE_URL`
 - 飞书文档抓取与图片下载依赖 `lark-cli`
 - 当前自动封面依赖外部生图服务，可能遇到 429 限流
+- 要让公众号自动发布成功，你需要把**当前机器的出口 IP**加入微信公众号后台的 IP 白名单，否则微信接口会拒绝请求
