@@ -59,11 +59,6 @@ IMAGE_BASE_URL=...
 ### 1. 从飞书直接发布
 
 ```bash
-node ./dist/cli.js publish \
-  --feishu "https://my.feishu.cn/wiki/xxxxxxxx" \
-  --article-author "Your Name"
-
-# 或安装成全局命令后使用
 feishu-wechat publish \
   --feishu "https://my.feishu.cn/wiki/xxxxxxxx" \
   --article-author "Your Name"
@@ -72,7 +67,7 @@ feishu-wechat publish \
 ### 2. 从飞书直接发布，并自动生成封面
 
 ```bash
-node ./dist/cli.js publish \
+feishu-wechat publish \
   --feishu "https://my.feishu.cn/wiki/xxxxxxxx" \
   --auto-cover
 ```
@@ -80,7 +75,7 @@ node ./dist/cli.js publish \
 ### 3. 发布本地 Markdown
 
 ```bash
-node ./dist/cli.js publish -f ./article.md
+feishu-wechat publish -f ./article.md
 ```
 
 ## 开源配置设计
@@ -109,7 +104,7 @@ pnpm test
 ### 真实端到端测试
 
 ```bash
-node ./dist/cli.js publish --feishu "https://my.feishu.cn/wiki/xxxxxxxx"
+feishu-wechat publish --feishu "https://my.feishu.cn/wiki/xxxxxxxx"
 ```
 
 验收方式：
