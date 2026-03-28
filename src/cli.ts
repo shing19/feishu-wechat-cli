@@ -17,9 +17,11 @@ import {
 import { getInputContent } from "./utils.js";
 import { fetchFeishuDocument, generateWechatCover, withFrontmatter } from "./pipeline/index.js";
 import { loadProjectEnv } from "./config.js";
+import { applyDefaultTheme, DEFAULT_THEME_ID, ensureDefaultThemeRegistered } from "./theme.js";
 
 export function createProgram(version: string = pkg.version): Command {
     loadProjectEnv();
+    void ensureDefaultThemeRegistered();
     const program = new Command();
 
     program
@@ -34,7 +36,7 @@ export function createProgram(version: string = pkg.version): Command {
         return cmd
             .argument("[input-content]", "markdown content (string input)")
             .option("-f, --file <path>", "read markdown content from local file or web URL")
-            .option("-t, --theme <theme-id>", "ID of the theme to use", "default")
+            .option("-t, --theme <theme-id>", `ID of the theme to use (default: ${DEFAULT_THEME_ID})`, DEFAULT_THEME_ID)
             .option("-h, --highlight <highlight-theme-id>", "ID of the code highlight theme to use", "solarized-light")
             .option("-c, --custom-theme <path>", "path to custom theme CSS file")
             .option("--mac-style", "display codeblock with mac style", true)
@@ -68,7 +70,7 @@ export function createProgram(version: string = pkg.version): Command {
             await runCommandWrapper(async () => {
                 let finalInput = inputContent;
 
-                let finalOptions = options;
+                let finalOptions = applyDefaultTheme(options);
 
                 if (options.feishu) {
                     const doc = await fetchFeishuDocument(options.feishu);
@@ -115,7 +117,7 @@ export function createProgram(version: string = pkg.version): Command {
 
     addCommonOptions(renderCmd).action(async (inputContent: string | undefined, options: RenderOptions) => {
         await runCommandWrapper(async () => {
-            const { gzhContent } = await prepareRenderContext(inputContent, options, getInputContent);
+            const { gzhContent } = await prepareRenderContext(inputContent, applyDefaultTheme(options), getInputContent);
             console.log(gzhContent.content);
         });
     });

@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { configDir } from "@wenyan-md/core/wrapper";
+import { applyDefaultTheme, ensureDefaultThemeRegistered } from "../theme.js";
 import multer from "multer";
 import { publishToWechatDraft } from "@wenyan-md/core/publish";
 
@@ -32,6 +33,7 @@ const UPLOAD_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const UPLOAD_DIR = path.join(configDir, "uploads");
 
 export async function serveCommand(options: ServeOptions) {
+    await ensureDefaultThemeRegistered();
     // 确保临时目录存在
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
 

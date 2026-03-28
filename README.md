@@ -12,6 +12,7 @@ npm install -g @shing19/feishu-wechat-cli
 - 从飞书 `wiki/docx` 抓取 Markdown
 - 自动下载飞书正文图片并上传到微信素材库
 - 发布到微信公众号草稿箱
+- 默认使用内置 `eva-purple` 主题（延续 writing-frontend 的紫色公众号风格）
 - 可选自动生成封面图
 
 ## 快速开始
@@ -92,6 +93,8 @@ EOF
 ```
 
 ## 使用
+
+默认情况下，CLI 会使用内置的 `eva-purple` 主题进行渲染和发布。你也可以继续通过 `-t/--theme` 切换到其他 Wenyan 主题。
 
 ### 从飞书直接发布
 

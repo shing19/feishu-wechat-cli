@@ -15,6 +15,15 @@ vi.mock("@wenyan-md/core/wrapper", () => {
   };
 });
 
+vi.mock("../src/theme.js", () => ({
+  DEFAULT_THEME_ID: "eva-purple",
+  ensureDefaultThemeRegistered: vi.fn().mockResolvedValue(undefined),
+  applyDefaultTheme: vi.fn((options: Record<string, unknown>) => ({
+    ...options,
+    theme: options.theme || "eva-purple",
+  })),
+}));
+
 vi.mock("../src/pipeline/index.js", () => ({
   fetchFeishuDocument: vi.fn(),
   generateWechatCover: vi.fn().mockResolvedValue("/tmp/feishu-assets/doc/auto-cover.png"),
@@ -106,7 +115,7 @@ describe("CLI Argument Parsing", () => {
       "# Hello",
       expect.objectContaining({
         footnote: true,
-        theme: "default",
+        theme: "eva-purple",
         macStyle: true,
         highlight: "solarized-light",
       }),

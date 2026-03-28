@@ -2,18 +2,20 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { prepareRenderContext } from "@wenyan-md/core/wrapper";
+import { ensureDefaultThemeRegistered } from "../src/theme.js";
 
 describe("prepareRenderContext", () => {
   const defaultOptions = {
-    theme: "default",
+    theme: "eva-purple",
     highlight: "solarized-light",
     macStyle: true,
     footnote: true,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.WECHAT_APP_ID = "test-app-id";
     process.env.WECHAT_APP_SECRET = "test-app-secret";
+    await ensureDefaultThemeRegistered();
   });
 
   afterEach(async () => {
@@ -32,7 +34,8 @@ describe("prepareRenderContext", () => {
       absoluteDirPath: undefined,
     }));
 
-    expect(gzhContent.content).toContain("<span>Hello</span></h1>");
+    expect(gzhContent.content).toContain("<span>Hello</span>");
+    expect(gzhContent.content).toContain("rgb(124, 58, 237)");
   });
 
   it("should render content from stdin when input arg is missing", async () => {
@@ -54,7 +57,8 @@ describe("prepareRenderContext", () => {
       return { content, absoluteDirPath: undefined };
     });
 
-    expect(gzhContent.content).toContain("<span>From Stdin</span></h1>");
+    expect(gzhContent.content).toContain("<span>From Stdin</span>");
+    expect(gzhContent.content).toContain("rgb(124, 58, 237)");
     process.stdin.isTTY = originalIsTTY;
   });
 
@@ -70,7 +74,8 @@ describe("prepareRenderContext", () => {
       absoluteDirPath: path.dirname(path.resolve(process.cwd(), file!)),
     }));
 
-    expect(gzhContent.content).toContain("<span>From File</span></h1>");
+    expect(gzhContent.content).toContain("<span>From File</span>");
+    expect(gzhContent.content).toContain("rgb(124, 58, 237)");
 
     await fs.unlink(filePath);
     process.stdin.isTTY = originalIsTTY;
