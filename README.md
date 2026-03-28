@@ -14,57 +14,69 @@ npm install -g @shing19/feishu-wechat-cli
 - 发布到微信公众号草稿箱
 - 可选自动生成封面图
 
-## 安装
+## 安装与配置
 
-### 1. 安装项目依赖
-
-```bash
-pnpm install
-pnpm build
-```
-
-### 2. 安装飞书官方 CLI（必需）
+### 1. 安装飞书官方 CLI
 
 本项目依赖飞书官方开源工具 **`larksuite/cli`** 来抓取文档和下载图片。
 
 仓库：<https://github.com/larksuite/cli>
 
-安装方式示例：
+安装：
 
 ```bash
 npm install -g @larksuite/cli
-lark-cli --help
+```
+
+### 2. 绑定飞书配置
+
+飞书 CLI 安装完成后，必须先执行：
+
+```bash
 lark-cli config init --new
 ```
 
-如果 `lark-cli --help` 能正常输出，说明依赖已安装完成。
-安装完成后，还需要执行 `lark-cli config init --new` 绑定你的飞书账号或应用配置，否则 CLI 无法抓取文档和下载图片。
+完成飞书账号或应用配置绑定。
 
-## 环境变量
+如果这一步没做，后面的飞书文档抓取和图片下载都无法工作。
 
-复制一份本地配置：
+### 3. 安装本工具
 
 ```bash
-cp .env.example .env
+npm install -g @shing19/feishu-wechat-cli
 ```
 
-最少需要配置：
+安装后确认：
 
-```env
-WECHAT_APP_ID=your_wechat_appid
-WECHAT_APP_SECRET=your_wechat_appsecret
+```bash
+feishu-wechat --help
 ```
 
-如果你要用自动封面：
+### 4. 配置环境变量
 
-```env
-IMAGE_API_KEY=...
-IMAGE_BASE_URL=...
+在你的工作目录里新建 `.env`：
+
+```bash
+cat > .env <<'EOF'
+WECHAT_APP_ID=你的公众号AppID
+WECHAT_APP_SECRET=你的公众号AppSecret
+IMAGE_API_KEY=你的图片模型Key
+IMAGE_BASE_URL=你的图片模型BaseURL
+EOF
 ```
 
-## 用法
+如果你这次先只测正文发布，不测自动封面，也可以只写：
 
-### 1. 从飞书直接发布
+```bash
+cat > .env <<'EOF'
+WECHAT_APP_ID=你的公众号AppID
+WECHAT_APP_SECRET=你的公众号AppSecret
+EOF
+```
+
+## 使用
+
+### 从飞书直接发布
 
 ```bash
 feishu-wechat publish \
@@ -72,7 +84,7 @@ feishu-wechat publish \
   --article-author "Your Name"
 ```
 
-### 2. 从飞书直接发布，并自动生成封面
+### 从飞书直接发布，并自动生成封面
 
 ```bash
 feishu-wechat publish \
@@ -80,27 +92,16 @@ feishu-wechat publish \
   --auto-cover
 ```
 
-### 3. 发布本地 Markdown
+### 发布本地 Markdown
 
 ```bash
 feishu-wechat publish -f ./article.md
 ```
 
-## 开源配置设计
+## 说明
 
-本项目只读取当前目录下的 `.env`。
-
-微信配置只保留一套命名：
-
-- `WECHAT_APP_ID`
-- `WECHAT_APP_SECRET`
-
-飞书抓取与图片下载默认内建使用 `lark-cli`，不做额外 provider 配置。
-封面生成也内建在本仓库 `scripts/generate-cover.py` 中，只通过环境变量提供模型访问配置：
-
-- `IMAGE_API_KEY`
-- `IMAGE_BASE_URL`
-
-## 注意事项
-
-- 当前自动封面依赖外部生图服务，可能遇到 429；建议后续补重试和降级策略
+- 本项目只读取当前目录下的 `.env`
+- 微信配置使用：`WECHAT_APP_ID`、`WECHAT_APP_SECRET`
+- 自动封面使用：`IMAGE_API_KEY`、`IMAGE_BASE_URL`
+- 飞书文档抓取与图片下载依赖 `lark-cli`
+- 当前自动封面依赖外部生图服务，可能遇到 429 限流
