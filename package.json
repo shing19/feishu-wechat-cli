@@ -26,13 +26,13 @@
     ".env.example",
     "scripts/generate-cover.py"
   ],
-  "homepage": "https://github.com/your-org/feishu-wechat-cli#readme",
+  "homepage": "https://github.com/shing19/feishu-wechat-cli#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/feishu-wechat-cli.git"
+    "url": "git+https://github.com/shing19/feishu-wechat-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/feishu-wechat-cli/issues"
+    "url": "https://github.com/shing19/feishu-wechat-cli/issues"
   },
   "scripts": {
     "build": "tsc",
