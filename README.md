@@ -51,7 +51,7 @@ WECHAT_APP_SECRET=your_wechat_appsecret
 
 ```env
 IMAGE_API_KEY=...
-IMAGE_BASE_URL=https://api.laozhang.ai
+IMAGE_BASE_URL=...
 ```
 
 ## 用法
