@@ -32,7 +32,7 @@ pnpm build
 安装方式示例：
 
 ```bash
-npm install -g @larksuiteoapi/cli
+npm install -g @lark-open/feishu-plugin-onboard-cli
 lark-cli --help
 ```
 
