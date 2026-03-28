@@ -93,26 +93,6 @@ feishu-wechat publish -f ./article.md
 - `IMAGE_API_KEY`
 - `IMAGE_BASE_URL`
 
-## 验证
-
-### 本地测试
-
-```bash
-pnpm test
-```
-
-### 真实端到端测试
-
-```bash
-feishu-wechat publish --feishu "https://my.feishu.cn/wiki/xxxxxxxx"
-```
-
-验收方式：
-- 去微信公众号后台草稿箱确认草稿已生成
-- 检查标题是否正确
-- 检查正文图片是否完整
-- 如果启用 `--auto-cover`，检查封面是否生成并上传成功
-
 ## 注意事项
 
 - `.env` 已被 git ignore，不会进公开仓库
