@@ -11,7 +11,7 @@ describe("normalizeFeishuMarkdown", () => {
     ].join("\n");
 
     const result = normalizeFeishuMarkdown(source);
-    expect(result).toContain('<section class="feishu-callout feishu-callout-tip" data-callout="tip">');
+    expect(result).toContain('<div class="feishu-callout feishu-callout-tip" data-callout="tip">');
     expect(result).toContain("这是一个提示");
     expect(result).toContain("第二行说明");
     expect(result).toContain("正文");
@@ -28,7 +28,15 @@ describe("normalizeFeishuMarkdown", () => {
     const result = normalizeFeishuMarkdown(source);
     expect(result).toContain('class="feishu-callout"');
     expect(result).toContain('🦞');
-    expect(result).toContain('• 第一条');
+    expect(result).toContain('<ul');
+    expect(result).toContain('<li style="margin: 6px 0;">第一条</li>');
+  });
+
+  it("converts quote-container text with bold markdown into styled blockquote", () => {
+    const source = '<quote-container>\n**成功标志：** 看到提示符\n</quote-container>';
+    const result = normalizeFeishuMarkdown(source);
+    expect(result).toContain('class="feishu-quote-container"');
+    expect(result).toContain('<strong>成功标志：</strong>');
   });
 });
 

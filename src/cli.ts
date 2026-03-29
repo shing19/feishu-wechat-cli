@@ -7,9 +7,7 @@ import {
     addTheme,
     ClientPublishOptions,
     listThemes,
-    prepareRenderContext,
     removeTheme,
-    renderAndPublish,
     renderAndPublishToServer,
     RenderOptions,
     ThemeOptions,
@@ -18,6 +16,8 @@ import { getInputContent } from "./utils.js";
 import { fetchFeishuDocument, generateWechatCover, withFrontmatter } from "./pipeline/index.js";
 import { loadProjectEnv } from "./config.js";
 import { applyDefaultTheme, DEFAULT_THEME_ID, ensureDefaultThemeRegistered } from "./theme.js";
+import { publishPatchedContent } from "./publish-local.js";
+import { renderFinalWechatHtml } from "./render-final.js";
 
 export function createProgram(version: string = pkg.version): Command {
     loadProjectEnv();
@@ -37,7 +37,7 @@ export function createProgram(version: string = pkg.version): Command {
             .argument("[input-content]", "markdown content (string input)")
             .option("-f, --file <path>", "read markdown content from local file or web URL")
             .option("-t, --theme <theme-id>", `ID of the theme to use (default: ${DEFAULT_THEME_ID})`, DEFAULT_THEME_ID)
-            .option("-h, --highlight <highlight-theme-id>", "ID of the code highlight theme to use", "solarized-light")
+            .option("-h, --highlight <highlight-theme-id>", "ID of the code highlight theme to use", "github-dark")
             .option("-c, --custom-theme <path>", "path to custom theme CSS file")
             .option("--mac-style", "display codeblock with mac style", true)
             .option("--no-mac-style", "disable mac style")
@@ -106,9 +106,22 @@ export function createProgram(version: string = pkg.version): Command {
                     const mediaId = await renderAndPublishToServer(finalInput, finalOptions, getInputContent);
                     console.log(`发布成功，Media ID: ${mediaId}`);
                 } else {
-                    // 走原有的本地直接发布模式
-                    const mediaId = await renderAndPublish(finalInput, finalOptions, getInputContent);
-                    console.log(`发布成功，Media ID: ${mediaId}`);
+                    const { content, absoluteDirPath } = await getInputContent(finalInput, finalOptions.file);
+                    const html = renderFinalWechatHtml(content, absoluteDirPath);
+                    const frontmatter = /---\n([\s\S]*?)\n---/.exec(content)?.[1] ?? "";
+                    const title = /title:\s*"([^"]+)"/.exec(frontmatter)?.[1] || /title:\s*(.+)/.exec(frontmatter)?.[1]?.trim();
+                    const cover = /cover:\s*"([^"]+)"/.exec(frontmatter)?.[1] || /cover:\s*(.+)/.exec(frontmatter)?.[1]?.trim();
+                    const author = /author:\s*"([^"]+)"/.exec(frontmatter)?.[1] || /author:\s*(.+)/.exec(frontmatter)?.[1]?.trim();
+                    const source_url = /source_url:\s*"([^"]+)"/.exec(frontmatter)?.[1] || /source_url:\s*(.+)/.exec(frontmatter)?.[1]?.trim();
+                    const mediaId = await publishPatchedContent({
+                        title,
+                        content: html,
+                        cover,
+                        author,
+                        source_url,
+                        absoluteDirPath,
+                    });
+                    console.log(`发布成功，Media ID: ${mediaId.media_id ?? mediaId}`);
                 }
             });
         });
@@ -117,8 +130,8 @@ export function createProgram(version: string = pkg.version): Command {
 
     addCommonOptions(renderCmd).action(async (inputContent: string | undefined, options: RenderOptions) => {
         await runCommandWrapper(async () => {
-            const { gzhContent } = await prepareRenderContext(inputContent, applyDefaultTheme(options), getInputContent);
-            console.log(gzhContent.content);
+            const { content, absoluteDirPath } = await getInputContent(inputContent, options.file);
+            console.log(renderFinalWechatHtml(content, absoluteDirPath));
         });
     });
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { configDir } from "@wenyan-md/core/wrapper";
 import { applyDefaultTheme, ensureDefaultThemeRegistered } from "../theme.js";
+import { patchRenderedWechatHtml } from "../render-patch.js";
 import multer from "multer";
 import { publishToWechatDraft } from "@wenyan-md/core/publish";
 
@@ -140,6 +141,8 @@ export async function serveCommand(options: ServeOptions) {
         if (gzhContent.cover && gzhContent.cover.startsWith("asset://")) {
             gzhContent.cover = resolveAssetPath(gzhContent.cover);
         }
+
+        gzhContent.content = patchRenderedWechatHtml(gzhContent.content);
 
         const data = await publishToWechatDraft({
             title: gzhContent.title,

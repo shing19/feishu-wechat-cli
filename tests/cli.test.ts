@@ -1,19 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("@wenyan-md/core/wrapper", () => {
-  const mockRenderAndPublish = vi.fn();
-  const mockRenderAndPublishToServer = vi.fn();
-  const mockPrepareRenderContext = vi.fn();
-
-  return {
-    addTheme: vi.fn(),
-    listThemes: vi.fn(),
-    removeTheme: vi.fn(),
-    prepareRenderContext: mockPrepareRenderContext,
-    renderAndPublish: mockRenderAndPublish,
-    renderAndPublishToServer: mockRenderAndPublishToServer,
-  };
-});
+vi.mock("@wenyan-md/core/wrapper", () => ({
+  addTheme: vi.fn(),
+  listThemes: vi.fn(),
+  removeTheme: vi.fn(),
+  renderAndPublishToServer: vi.fn(),
+}));
 
 vi.mock("../src/theme.js", () => ({
   DEFAULT_THEME_ID: "eva-purple",
@@ -37,9 +29,31 @@ vi.mock("../src/pipeline/index.js", () => ({
   }),
 }));
 
+vi.mock("../src/publish-local.js", () => ({
+  publishPatchedContent: vi.fn().mockResolvedValue({ media_id: "mock-media-id" }),
+}));
+
+vi.mock("../src/render-final.js", () => ({
+  renderFinalWechatHtml: vi.fn().mockReturnValue("<h1>Hello</h1>"),
+}));
+
+vi.mock("../src/utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/utils.js")>();
+  return {
+    ...original,
+    getInputContent: vi.fn().mockResolvedValue({
+      content: "# Hello",
+      absoluteDirPath: "/mock/path",
+    }),
+  };
+});
+
 import { createProgram } from "../src/cli.js";
 import * as wrapper from "@wenyan-md/core/wrapper";
 import * as pipeline from "../src/pipeline/index.js";
+import * as publishLocal from "../src/publish-local.js";
+import * as renderFinal from "../src/render-final.js";
+import * as utils from "../src/utils.js";
 
 describe("CLI Argument Parsing", () => {
   let program: ReturnType<typeof createProgram>;
@@ -48,24 +62,23 @@ describe("CLI Argument Parsing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.HOME = "/tmp";
-    vi.mocked(wrapper.prepareRenderContext).mockResolvedValue({
-      gzhContent: { content: "<h1>Hello</h1>" } as any,
+    vi.mocked(wrapper.renderAndPublishToServer).mockResolvedValue("mock-media-id");
+    vi.mocked(utils.getInputContent).mockResolvedValue({
+      content: "# Hello",
       absoluteDirPath: "/mock/path",
     });
-    vi.mocked(wrapper.renderAndPublish).mockResolvedValue("mock-media-id");
-    vi.mocked(wrapper.renderAndPublishToServer).mockResolvedValue("mock-media-id");
     vi.mocked(pipeline.fetchFeishuDocument).mockResolvedValue({
       markdown: [
         "# Feishu",
         "",
-        "<section class=\"feishu-callout feishu-callout-tip\" data-callout=\"tip\">",
+        '<div class="feishu-callout feishu-callout-tip" data-callout="tip">',
         "提示内容",
-        "</section>",
+        "</div>",
         "",
-        "<section class=\"feishu-figure\">",
-        "<img src=\"./image-001.png\" alt=\"图注说明\" />",
-        "<p class=\"feishu-caption\">图注说明</p>",
-        "</section>",
+        '<div class="feishu-figure">',
+        '<img src="./image-001.png" alt="图注说明" />',
+        '<p class="feishu-caption">图注说明</p>',
+        "</div>",
       ].join("\n"),
       title: "Feishu Title",
       assetDir: "/tmp/feishu-assets/doc",
@@ -86,45 +99,40 @@ describe("CLI Argument Parsing", () => {
     expect(program.version()).toBe("1.0.0");
   });
 
-  it("should call publish command with correct options", async () => {
+  it("should call publish command with correct options (local path)", async () => {
     const args = ["node", "feishu-wechat", "publish", "-f", "test.md", "-t", "rainbow", "--no-mac-style"];
 
     await program.parseAsync(args);
 
-    expect(wrapper.renderAndPublish).toHaveBeenCalledTimes(1);
-    const [inputArg, passedOptions] = vi.mocked(wrapper.renderAndPublish).mock.calls[0];
-    expect(inputArg).toBeUndefined();
-    expect(passedOptions).toEqual(
-      expect.objectContaining({
-        file: "test.md",
-        footnote: true,
-        theme: "rainbow",
-        macStyle: false,
-        highlight: "solarized-light",
-      }),
-    );
+    expect(publishLocal.publishPatchedContent).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(publishLocal.publishPatchedContent).mock.calls[0][0];
+    expect(call.content).toBe("<h1>Hello</h1>");
   });
 
   it("should call render command with string input", async () => {
     const args = ["node", "feishu-wechat", "render", "# Hello"];
+    const outputSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
     await program.parseAsync(args);
 
-    expect(wrapper.prepareRenderContext).toHaveBeenCalledTimes(1);
-    expect(wrapper.prepareRenderContext).toHaveBeenCalledWith(
-      "# Hello",
-      expect.objectContaining({
-        footnote: true,
-        theme: "eva-purple",
-        macStyle: true,
-        highlight: "solarized-light",
-      }),
-      expect.any(Function),
-    );
+    expect(renderFinal.renderFinalWechatHtml).toHaveBeenCalledTimes(1);
+    expect(renderFinal.renderFinalWechatHtml).toHaveBeenCalledWith("# Hello", "/mock/path");
+    outputSpy.mockRestore();
   });
 
   it("should fetch feishu content before publish", async () => {
     const fs = await import("node:fs/promises");
+
+    // For feishu flow, getInputContent reads the article.md written to disk
+    // We need it to return the actual frontmatter content
+    vi.mocked(utils.getInputContent).mockImplementation(async (_input, file) => {
+      if (file && file.includes("article.md")) {
+        const content = await fs.readFile(file, "utf-8");
+        return { content, absoluteDirPath: "/tmp/feishu-assets/doc" };
+      }
+      return { content: "# Hello", absoluteDirPath: "/mock/path" };
+    });
+
     const args = [
       "node",
       "feishu-wechat",
@@ -140,10 +148,12 @@ describe("CLI Argument Parsing", () => {
     await program.parseAsync(args);
 
     expect(pipeline.fetchFeishuDocument).toHaveBeenCalledWith("https://my.feishu.cn/wiki/abc123");
-    expect(wrapper.renderAndPublish).toHaveBeenCalledTimes(1);
-    const [inputArg, passedOptions] = vi.mocked(wrapper.renderAndPublish).mock.calls[0];
-    expect(inputArg).toBeUndefined();
-    expect(passedOptions).toEqual(expect.objectContaining({ file: "/tmp/feishu-assets/doc/article.md" }));
+    expect(publishLocal.publishPatchedContent).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(publishLocal.publishPatchedContent).mock.calls[0][0];
+    expect(call.title).toBe("Feishu Title");
+    expect(call.cover).toBe("./cover.jpg");
+    expect(call.author).toBe("shing");
+
     const article = await fs.readFile("/tmp/feishu-assets/doc/article.md", "utf-8");
     expect(article).toContain('title: "Feishu Title"');
     expect(article).toContain('cover: "./cover.jpg"');

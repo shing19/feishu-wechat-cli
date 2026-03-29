@@ -81,7 +81,36 @@ const DEFAULT_THEME_CSS = `#wenyan {
 #wenyan ul,
 #wenyan ol {
   margin: 12px 0;
-  padding-left: 1.4em;
+  padding-left: 1.6em;
+}
+
+#wenyan ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#wenyan ul > li {
+  position: relative;
+  margin: 6px 0;
+  padding-left: 1.5em;
+}
+
+#wenyan ul > li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #8d3de6;
+  font-weight: 700;
+}
+
+#wenyan ol {
+  padding-left: 1.8em;
+}
+
+#wenyan ol > li::marker {
+  color: #8d3de6;
+  font-weight: 700;
 }
 
 #wenyan li {
@@ -99,19 +128,21 @@ const DEFAULT_THEME_CSS = `#wenyan {
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 0.92em;
-  color: #6f42c1;
-  background: #f5f5f5;
+  color: #c084fc;
+  background: #1f1b2e;
 }
 
 #wenyan pre {
   margin: 16px 0;
   padding: 16px;
-  border-radius: 8px;
-  background: #f5f5f5;
+  border-radius: 10px;
+  background: #12111a;
+  border: 1px solid rgba(192, 132, 252, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 #wenyan pre code {
-  color: #24292e;
+  color: #f5f3ff;
   background: transparent;
 }
 

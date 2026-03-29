@@ -1,5 +1,6 @@
 const INLINE_IMAGE_RE = /<image\s+token="([^"]+)"([^>]*)\/>/g;
 const CALLOUT_TAG_RE = /<callout([^>]*)>([\s\S]*?)<\/callout>/gi;
+const QUOTE_CONTAINER_RE = /<quote-container>([\s\S]*?)<\/quote-container>/gi;
 const CALLOUT_HEADER_RE = /^\[(TIP|INFO|NOTE|WARNING|WARN|CAUTION|SUCCESS|ERROR)\]\s*(.*)$/i;
 
 function escapeHtml(value: string): string {
@@ -47,17 +48,61 @@ function resolveFeishuEmoji(value: string | undefined): string {
   return table[value.toLowerCase()] || value;
 }
 
+function mapFeishuColor(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const table: Record<string, string> = {
+    "dark-gray": "#f3f4f6",
+    gray: "#d1d5db",
+    blue: "#bfdbfe",
+    red: "#fecaca",
+    yellow: "#fde68a",
+    green: "#bbf7d0",
+    purple: "#ddd6fe",
+  };
+  return table[value.toLowerCase()] || value;
+}
+
+function renderInlineMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+function normalizeQuoteContainers(markdown: string): string {
+  return markdown.replace(QUOTE_CONTAINER_RE, (_match, inner: string) => {
+    const lines = inner
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => renderInlineMarkdown(line));
+
+    const content = lines.map((line) => `<p style="margin: 8px 0;">${line}</p>`).join("\n");
+    return [
+      `<div class="feishu-quote-container" style="margin: 18px 0; padding: 10px 16px; color: #2b2b2b; font-size: 0.95em; border-left: 4px solid #8d3de6; border-radius: 6px; background: linear-gradient(135deg, rgba(141, 61, 230, 0.06) 0%, rgba(38, 213, 76, 0.06) 100%);">`,
+      content,
+      `</div>`,
+    ].join("\n");
+  });
+}
+
 function normalizeCalloutTags(markdown: string): string {
   return markdown.replace(CALLOUT_TAG_RE, (_match, attrs: string, inner: string) => {
     const emoji = resolveFeishuEmoji(extractAttr(attrs, "emoji"));
-    const background = extractAttr(attrs, "background-color") || "#f6f7fb";
-    const border = extractAttr(attrs, "border-color") || "#d6d9e0";
-    const content = inner.trim().replace(/^[-*]\s+/gm, "• ");
+    const background = mapFeishuColor(extractAttr(attrs, "background-color"), "#f6f7fb");
+    const border = mapFeishuColor(extractAttr(attrs, "border-color"), "#d6d9e0");
+    const items = inner
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.replace(/^[-*]\s+/, ""));
+
+    const renderedItems = items.map((item) => `<li style="margin: 6px 0;">${renderInlineMarkdown(item)}</li>`).join("\n");
+
     return [
-      `<section class="feishu-callout" data-callout="true" style="margin: 1.2em 0; padding: 12px 14px; border-radius: 12px; background: ${background}; border: 1px solid ${border};">`,
+      `<div class="feishu-callout" data-callout="true" style="margin: 1.2em 0; padding: 12px 14px; border-radius: 12px; background: ${background}; border: 1px solid ${border};">`,
       `<p style="margin: 0 0 8px 0;"><strong>${emoji} 提示</strong></p>`,
-      `<div>${content}</div>`,
-      `</section>`,
+      `<ul style="margin: 0; padding-left: 1.25em;">${renderedItems}</ul>`,
+      `</div>`,
     ].join("\n");
   });
 }
@@ -112,12 +157,13 @@ function normalizeCalloutBlock(lines: string[], startIndex: number): { block?: s
 
   const inner = renderedLines.join("\n").trim();
   const content = inner ? `\n${inner}\n` : "\n";
-  const block = `<section class="feishu-callout feishu-callout-${callout.type}" data-callout="${callout.type}">\n${content}</section>`;
+  const block = `<div class="feishu-callout feishu-callout-${callout.type}" data-callout="${callout.type}">\n${content}</div>`;
   return { block, nextIndex: index };
 }
 
 export function normalizeFeishuMarkdown(markdown: string): string {
-  const calloutNormalized = normalizeCalloutTags(markdown);
+  const quoteNormalized = normalizeQuoteContainers(markdown);
+  const calloutNormalized = normalizeCalloutTags(quoteNormalized);
   const imageNormalized = calloutNormalized.replace(INLINE_IMAGE_RE, (_match, token: string, attrs: string) => {
     const caption = extractImageCaption(attrs);
     const safeCaption = caption ? ` caption="${escapeHtml(caption)}"` : "";
@@ -154,10 +200,10 @@ export function replaceFeishuImageTokens(markdown: string, tokenToLocalPath: Map
     const caption = extractImageCaption(attrs);
     if (caption) {
       return [
-        `<section class="feishu-figure" style="margin: 1.25em 0; text-align: center;">`,
+        `<div class="feishu-figure" style="margin: 1.25em 0; text-align: center;">`,
         `<img src="${localPath}" alt="${escapeHtml(caption)}" />`,
         `<p class="feishu-caption" style="margin-top: 8px; color: #888; font-size: 14px; text-align: center;">${caption}</p>`,
-        `</section>`,
+        `</div>`,
       ].join("\n");
     }
     return `![](${localPath})`;
